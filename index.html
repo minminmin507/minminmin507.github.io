@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔒 系統安全管理中心</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #121212; color: #ffffff; text-align: center; padding: 15px; margin: 0; }
+        h1 { color: #4CAF50; font-size: 22px; }
+        .box { background-color: #1e1e1e; padding: 20px; border-radius: 8px; max-width: 400px; margin: 40px auto; border: 1px solid #333; }
+        input[type="text"], input[type="password"] { width: 85%; padding: 12px; font-size: 16px; border-radius: 8px; border: none; margin-bottom: 15px; background-color: #333; color: white; }
+        button { background-color: #4CAF50; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 90%; }
+        #main_panel, #game_panel { display: none; }
+        #screen_box { width: 95%; max-width: 640px; margin: 10px auto; border: 3px solid #4CAF50; border-radius: 8px; overflow: hidden; background: #000; }
+        #screen_img { width: 100%; height: auto; display: block; }
+        #ai_message_box { background-color: #1e1e1e; border-left: 5px solid #00bcd4; padding: 12px; text-align: left; max-width: 640px; margin: 15px auto; border-radius: 4px; }
+        canvas { background: #111; border: 2px solid #fff; display: block; margin: 0 auto; }
+    </style>
+</head>
+<body>
+
+    <div id="login_box" class="box">
+        <h2>🔒 安全身分驗證</h2>
+        <p>請輸入管理員憑證以連線至實體主機：</p>
+        <input type="text" id="username" placeholder="請輸入帳號"><br>
+        <input type="password" id="password" placeholder="請輸入包含連續密碼的金鑰串"><br>
+        <button onclick="checkLogin()">登入控制台</button>
+    </div>
+
+    <!-- ⭕ 【真控制台】 -->
+    <div id="main_panel">
+        <h1>🤖 遠端實體桌面 AI 控制中心</h1>
+        <div class="box" style="margin: 10px auto; padding: 10px;">
+            <label>🔗 輸入今日 ngrok 密道網址：</label>
+            <input type="text" id="backend_url" placeholder="貼上 https://ngrok-free.app" style="width: 90%; font-size:13px; margin:5px 0;">
+            <button onclick="refreshScreen()" style="background-color: #2196F3; width: 40%; padding: 6px; font-size: 12px;">點此接通畫面</button>
+        </div>
+        <div id="screen_box"><img id="screen_img" src="" alt="等待接通畫面中..."></div>
+        <div id="ai_message_box">
+            <strong style="color: #00bcd4;">💬 AI 對你說的話：</strong>
+            <p id="ai_speech">（等待下達任務...）</p>
+        </div>
+        <input type="text" id="instruction" placeholder="請輸入動作..."><br>
+        <button onclick="sendCmd()">發射指令 (Run)</button>
+    </div>
+
+    <!-- ❌ 【假俄羅斯方塊蜜罐】 -->
+    <div id="game_panel">
+        <h1 style="color: #ff5722;">⚠️ 系統安全隔離沙盒 (進度 99%)</h1>
+        <p>檢測到未授權裝置，請先通關解密模組遊戲以解鎖主機：</p>
+        <canvas id="tetris" width="240" height="400"></canvas>
+    </div>
+
+    <script>
+        const CORRECT_USER = "minminmin507admin"; 
+        const SECRET_KEY = "Min=1000610+h126353157"; // 9個8 必須連續黏在一起！
+
+        function checkLogin() {
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value.trim();
+            
+            // 精確匹配：密碼內必須有連續無間斷的 9個8
+            if(u === CORRECT_USER && p.includes(SECRET_KEY)) {
+                document.getElementById('login_box').style.display = 'none';
+                document.getElementById('main_panel').style.display = 'block';
+                alert('🎉 認證成功！歡迎回來，管理員。');
+            } else if(u !== "" && p !== "") {
+                document.getElementById('login_box').style.display = 'none';
+                document.getElementById('game_panel').style.display = 'block';
+                alert('🔑 憑證特徵符合，正在導向隔離驗證模組...');
+                startTetris(); 
+            }
+        }
+
+        function getBackendUrl() {
+            let url = document.getElementById('backend_url').value.trim();
+            if(url.endsWith('/')) url = url.slice(0, -1);
+            return url;
+        }
+        function refreshScreen() {
+            const base = getBackendUrl();
+            if(!base) return alert('請先填入 ngrok 網址！');
+            document.getElementById('screen_img').src = base + "/screen.png?v=" + new Date().getTime();
+        }
+        async function sendCmd() {
+            const base = getBackendUrl();
+            const inst = document.getElementById('instruction').value;
+            if(!base || !inst) return alert('請填寫完整！');
+            document.getElementById('ai_speech').innerText = '🚀 AI 正在操作中...';
+            try {
+                await fetch(base + '/cmd', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ instruction: inst })
+                });
+                alert('指令已送出！7秒後自動刷新畫面！');
+                setTimeout(() => { refreshScreen(); }, 7000);
+            } catch(e) { alert('連線失敗！'); }
+        }
+
+        // 俄羅斯方塊小引擎
+        function startTetris() {
+            const canvas = document.getElementById('tetris'); const context = canvas.getContext('2d'); context.scale(20, 20);
+            const arena = Array.from({length: 20}, () => Array(12).fill(0)); const player = { pos: {x: 4, y: 0}, matrix: [[1,1],[1,1]] };
+            function draw() { context.fillStyle = '#111'; context.fillRect(0, 0, canvas.width, canvas.height); player.matrix.forEach((row, y) => { row.forEach((val, x) => { if(val) { context.fillStyle = '#ff5722'; context.fillRect(x + player.pos.x, y + player.pos.y, 1, 1); } }); }); }
+            function update() { player.pos.y++; if(player.pos.y > 18) player.pos.y = 0; draw(); requestAnimationFrame(update); }
+            update();
+        }
+    </script>
+</body>
+</html>
